@@ -251,8 +251,8 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
 
 
 if __name__ == '__main__':
-    data = pd.read_csv('SS_unique_lys_crosslink_targetonly_2FDR_separate_all_exported_XlinkCyNET.csv', sep=' ')
-    uniprot = pd.read_csv('uniprotkb_AND_reviewed_true_AND_model_o_2023_07_18.tsv', sep='\t', header=0)
+    data = pd.read_csv('../protein_location_prediction_local/SS_unique_lys_crosslink_targetonly_2FDR_separate_all_exported_XlinkCyNET.csv', sep=' ')
+    uniprot = pd.read_csv('../protein_location_prediction_local/uniprotkb_AND_reviewed_true_AND_model_o_2023_07_18.tsv', sep='\t', header=0)
 
     lm_data = get_localization_marker_information(data, uniprot)
     lm_data = lm_data.drop_duplicates(subset=['gene'], keep='first')
