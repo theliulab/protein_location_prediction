@@ -80,9 +80,6 @@ def combine_predicted_information(proteins,combined_data):
             xlink = sub.iloc[j]['predicting_crosslinks']
             xlink_split = xlink.split('-')
 
-            if 'ND' in xlink_split[3] or 'ATP' in xlink_split[3]:
-                continue
-
             predicted_gene_list.append(gene)
             predicted_gene_residue_list.append(int(xlink_split[3]))
             predicting_gene_residue_list.append(int(xlink_split[1]))
