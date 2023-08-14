@@ -148,7 +148,6 @@ def update_xlinks_transmembrane(combined_data):
         elif (sub.transmembrane != '').sum() == 1:
             # get crosslinks before and after and order them new
             reg = sub.loc[sub['transmembrane'] != '', 'transmembrane'].values[0]
-
             region = reg.split('..')
 
             crosslinks_before_tm = []
@@ -159,14 +158,15 @@ def update_xlinks_transmembrane(combined_data):
             transmem_end = int(region[1])
             for k in crosslinks_split:
                 link = k.split('-')
-                if link[1] == 'ATP6' or link[1] == 'ND1':
-                    continue
+
+                # also before and after will be the same if there are multiple transmembrane regions
                 if int(link[1]) < transmem_start:
                     crosslinks_before_tm.append(k)
                 elif int(link[1]) > transmem_end:
                     crosslinks_after_tm.append(k)
                 elif transmem_end >= int(link[1]) >= transmem_start:
                     crosslinks_in_tm.append(k)
+
             # concatenate list and add them
             gene_list.extend((gene, gene, gene))
             protein_list.extend((protein, protein, protein))
@@ -175,9 +175,8 @@ def update_xlinks_transmembrane(combined_data):
                 ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm), '#'.join(crosslinks_after_tm)))
             transmembrane_list.extend((np.nan, reg, np.nan))
 
-        elif (sub.transmembrane != '').sum() > 1:
+        elif (sub.transmembrane != '').sum() == 2:
             transmem_regions = sub.loc[sub['transmembrane'] != '', 'transmembrane'].values
-
 
             for j in range(len(transmem_regions)):
                 transmem_all = transmem_regions[j].split('..')
@@ -186,7 +185,7 @@ def update_xlinks_transmembrane(combined_data):
 
                 # location before transmembrane region
                 index_transmembrane = sub.index[sub['transmembrane'] == transmem_regions[j]].tolist()
-                location_before = sub.loc[index_transmembrane[0]-1]['subcellular_location']
+                location_before = sub.loc[index_transmembrane[0] - 1]['subcellular_location']
                 # location after transmembrane region
                 location_after = sub.loc[index_transmembrane[0] + 1]['subcellular_location']
 
@@ -194,59 +193,120 @@ def update_xlinks_transmembrane(combined_data):
                 crosslinks_after_tm = []
                 crosslinks_in_tm = []
                 # get all crosslinks
-
+                # if first tm region, take links before and in tm
                 if transmem_regions[j] == transmem_regions[0]:
                     for k in crosslinks_split:
                         link = k.split('-')
-                        if link[1] == 'ATP6' or link[1] == 'ND1':
-                            continue
                         if int(link[1]) < transmem_start:
                             crosslinks_before_tm.append(k)
                         elif transmem_end >= int(link[1]) >= transmem_start:
                             crosslinks_in_tm.append(k)
-                elif transmem_regions[j] != transmem_regions[0] and transmem_regions[j] != transmem_regions[
-                    len(transmem_regions) - 1]:
-                    transmem_before = transmem_regions[j - 1].split('..')
-                    transmem_before_end = int(transmem_before[1])
 
-                    transmem_after = transmem_regions[j + 1].split('..')
-                    transmem_after_start = int(transmem_after[1])
+                    # concatenate list and add them
+                    gene_list.extend((gene, gene))
+                    protein_list.extend((protein, protein))
+                    location_list.extend((location_before, np.nan))
+                    crosslinks_list.extend(
+                        ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm)))
+                    transmembrane_list.extend((np.nan, transmem_regions[j]))
 
-                    for k in crosslinks_split:
-                        link = k.split('-')
-                        if link[1] == 'ATP6' or link[1] == 'ND1':
-                            continue
-                        # also before and after will be the same if there are multiple transmembrane regions
-                        if transmem_start > int(link[1]) > transmem_before_end:
-                            crosslinks_before_tm.append(k)
-
-                        elif (int(link[1]) > transmem_end) and (int(link[1]) < transmem_after_start):
-                            crosslinks_after_tm.append(k)
-                        elif transmem_end >= int(link[1]) >= transmem_start:
-                            crosslinks_in_tm.append(k)
                 elif transmem_regions[j] == transmem_regions[len(transmem_regions) - 1]:
                     transmem_before = transmem_regions[j - 1].split('..')
                     transmem_before_end = int(transmem_before[1])
 
                     for k in crosslinks_split:
                         link = k.split('-')
-                        if link[1] == 'ATP6' or link[1] == 'ND1':
-                            continue
-                        # also before and after will be the same if there are multiple transmembrane regions
+                        # also before and after will be the same if there are multiple transmembrane region
                         if transmem_start > int(link[1]) > transmem_before_end:
                             crosslinks_before_tm.append(k)
                         elif int(link[1]) > transmem_end:
                             crosslinks_after_tm.append(k)
                         elif transmem_end >= int(link[1]) >= transmem_start:
                             crosslinks_in_tm.append(k)
+
+                    gene_list.extend((gene, gene, gene))
+                    protein_list.extend((protein, protein, protein))
+                    location_list.extend((location_before, np.nan, location_after))
+                    crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm),
+                                            '#'.join(crosslinks_after_tm)))
+                    transmembrane_list.extend((np.nan, transmem_regions[j], np.nan))
+
+        elif (sub.transmembrane != '').sum() > 2:
+            transmem_regions = sub.loc[sub['transmembrane'] != '', 'transmembrane'].values
+
+            transmem_all = transmem_regions[j].split('..')
+            transmem_start = int(transmem_all[0])
+            transmem_end = int(transmem_all[1])
+
+            # location before transmembrane region
+            index_transmembrane = sub.index[sub['transmembrane'] == transmem_regions[j]].tolist()
+            location_before = sub.loc[index_transmembrane[0] - 1]['subcellular_location']
+            # location after transmembrane region
+            location_after = sub.loc[index_transmembrane[0] + 1]['subcellular_location']
+
+            crosslinks_before_tm = []
+            crosslinks_after_tm = []
+            crosslinks_in_tm = []
+            # get all crosslinks
+            # if first tm region, take links before and in tm
+            if transmem_regions[j] == transmem_regions[0]:
+                for k in crosslinks_split:
+                    link = k.split('-')
+                    if int(link[1]) < transmem_start:
+                        crosslinks_before_tm.append(k)
+                    elif transmem_end >= int(link[1]) >= transmem_start:
+                        crosslinks_in_tm.append(k)
+
                 # concatenate list and add them
+                gene_list.extend((gene, gene))
+                protein_list.extend((protein, protein))
+                location_list.extend((location_before, np.nan))
+                crosslinks_list.extend(
+                    ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm)))
+                transmembrane_list.extend((np.nan, transmem_regions[j]))
+            # if neither first nor last tm region, take links before, in and after tm
+            elif transmem_regions[j] != transmem_regions[0] and transmem_regions[j] != transmem_regions[
+                len(transmem_regions) - 1]:
+                transmem_before = transmem_regions[j - 1].split('..')
+                transmem_before_end = int(transmem_before[1])
+
+                transmem_after = transmem_regions[j + 1].split('..')
+                transmem_after_start = int(transmem_after[1])
+
+                for k in crosslinks_split:
+                    link = k.split('-')
+                    # also before and after will be the same if there are multiple transmembrane regions
+                    if transmem_start > int(link[1]) > transmem_before_end:
+                        crosslinks_before_tm.append(k)
+                    elif transmem_end >= int(link[1]) >= transmem_start:
+                        crosslinks_in_tm.append(k)
+                # concatenate list and add them
+                gene_list.extend((gene, gene))
+                protein_list.extend((protein, protein))
+                location_list.extend((location_before, np.nan))
+                crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm)))
+                transmembrane_list.extend((np.nan, transmem_regions[j]))
+            # if last tm, take links in and after tm region
+            elif transmem_regions[j] == transmem_regions[len(transmem_regions) - 1]:
+                transmem_before = transmem_regions[j - 1].split('..')
+                transmem_before_end = int(transmem_before[1])
+
+                for k in crosslinks_split:
+                    link = k.split('-')
+                    # also before and after will be the same if there are multiple transmembrane region
+                    if transmem_start > int(link[1]) > transmem_before_end:
+                        crosslinks_before_tm.append(k)
+                    elif int(link[1]) > transmem_end:
+                        crosslinks_after_tm.append(k)
+                    elif transmem_end >= int(link[1]) >= transmem_start:
+                        crosslinks_in_tm.append(k)
+
                 gene_list.extend((gene, gene, gene))
                 protein_list.extend((protein, protein, protein))
-                location_list.extend((location_before, np.nan, location_after))
-                crosslinks_list.extend(
-                    ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm), '#'.join(crosslinks_after_tm)))
+                subcellular_location_list.extend((location_before, np.nan, location_after))
+                crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm),
+                                        '#'.join(crosslinks_after_tm)))
                 transmembrane_list.extend((np.nan, transmem_regions[j], np.nan))
-
 
     new_data = pd.DataFrame({'gene': gene_list, 'protein': protein_list,
                              'subcellular_location': location_list,
