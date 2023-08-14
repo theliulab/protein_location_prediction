@@ -20,7 +20,7 @@
   - if this protein has transmembrane regions, it will get multiple rows splitting crosslinks and
     locations in each row according to residue numbers of the transmembrane region 
       | Protein | Crosslink | Transmembrane region |
-      | ------- | --------- | -------------------- |
+      | :--- | :---: | ---: |
       | Protein1 | P1-3-P5-6 | |
       | Protein1 |           | 5..9 |
       | Protein1 | P1-11-P8-5 | |‚
