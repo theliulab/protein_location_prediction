@@ -96,27 +96,28 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
 
             protein = re.sub("^[^\\|]*\\|([^\\|]+)\\|.*$", "\\1", data[proteins[q]][i])
 
-            if gene in gene_helper_list:
-                continue
-
-            gene_helper_list.append(gene)
             # get all crosslinks as list
             crosslinks = data.iloc[i]['crosslinks_ab']
             crosslinks_split = crosslinks.split('#')
 
+            if gene in gene_helper_list:
+                continue
+
+            gene_helper_list.append(gene)
+
             # get all crosslinks for this gene by adding crosslinks where its gene_b
-            if genes[q] == genes[0]:
-                gene_b_rows = data.loc[data[genes[1]] == gene]
-            else:
-                gene_b_rows = data.loc[data[genes[0]] == gene]
+            gene_b_rows = data.loc[data['gene_b'] == gene]
 
             # if crosslinked gene is not gene_a/gene_b and not in data table, add it
+            # gather all its crosslinks for prediction
+            # if gene is gene_a, it has all its possible crosslinks. not the case if gene is gene_b
             for n in list(range(gene_b_rows.shape[0])):
                 xlink = gene_b_rows.iloc[n]['crosslinks_ab']
                 xlink_split = xlink.split('#')
 
                 for o in xlink_split:
                     sp = o.split('-')
+
 
                     if gene == sp[0] and o not in crosslinks_split:
                         crosslinks_split.append(o)
@@ -129,8 +130,12 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
             # get inter-links
             for m in crosslinks_split:
                 xl = m.split('-')
-                if (gene == xl[0] or gene == xl[2]) and xl[0] != xl[2]:
+                if gene == xl[0] and xl[0] != xl[2] and m not in crosslinks_inter:
                     crosslinks_inter.append('-'.join(xl))
+                elif gene == [2]:
+                    rev_xlink = xl[2] + '-' + xl[3] + '-' + xl[0] + '-' + xl[1]
+                    if rev_xlink not in crosslinks_inter:
+                        crosslinks_inter.append(rev_xlink)
 
             if lm_data['gene'].eq(gene).any():
                 # exclude brackets if they exist in string
@@ -293,14 +298,11 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
 
             else:
                 # if there are non just add all crosslinks
-                if gene in gene_list:
-                    continue
-                else:
-                    gene_list.append(gene)
-                    protein_list.append(protein)
-                    crosslinks_list.append('#'.join(crosslinks_inter))
-                    subcellular_location_list.append(location)
-                    transmembrane_list.append(np.nan)
+                gene_list.append(gene)
+                protein_list.append(protein)
+                crosslinks_list.append('#'.join(crosslinks_inter))
+                subcellular_location_list.append(location)
+                transmembrane_list.append(np.nan)
 
     new_data = pd.DataFrame({'gene': gene_list, 'protein': protein_list,
                              'subcellular_location': subcellular_location_list,
