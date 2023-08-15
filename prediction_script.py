@@ -24,7 +24,11 @@ def predict_protein_location_1epoch(proteins):
             link = j.split('-')
             if len(link) < 4:
                 continue
-            gene_b = link[2]
+
+            if link[2] == gene:
+                gene_b = link[0]
+            else:
+                gene_b = link[2]
 
             predicted_gene_list.append(gene_b)
             predicting_gene_list.append(gene)
@@ -80,6 +84,9 @@ def combine_predicted_information(proteins,combined_data):
             xlink = sub.iloc[j]['predicting_crosslinks']
             xlink_split = xlink.split('-')
 
+            # if using an older version of the data preparation script you might have to use the next two lines
+            if xlink_split[3] == 'ND1' or xlink_split[3] == 'ATP8':
+                continue
             predicted_gene_list.append(gene)
             predicted_gene_residue_list.append(int(xlink_split[3]))
             predicting_gene_residue_list.append(int(xlink_split[1]))
@@ -267,9 +274,6 @@ def update_xlinks_transmembrane(combined_data):
                 transmem_before = transmem_regions[j - 1].split('..')
                 transmem_before_end = int(transmem_before[1])
 
-                transmem_after = transmem_regions[j + 1].split('..')
-                transmem_after_start = int(transmem_after[1])
-
                 for k in crosslinks_split:
                     link = k.split('-')
                     # also before and after will be the same if there are multiple transmembrane regions
@@ -300,7 +304,7 @@ def update_xlinks_transmembrane(combined_data):
 
                 gene_list.extend((gene, gene, gene))
                 protein_list.extend((protein, protein, protein))
-                subcellular_location_list.extend((location_before, np.nan, location_after))
+                location_list.extend((location_before, np.nan, location_after))
                 crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm),
                                         '#'.join(crosslinks_after_tm)))
                 transmembrane_list.extend((np.nan, transmem_regions[j], np.nan))
