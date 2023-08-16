@@ -320,8 +320,11 @@ if __name__ == '__main__':
     combined_data = pd.read_csv('combined_data.csv')
 
     data = update_xlinks_transmembrane(combined_data)
+
+    data.to_csv('updated_xlinks_intermediate.csv',index=False)
     # predict protein location
     predicted_proteins = predict_protein_location_1epoch(combined_data)
+    predicted_proteins.to_csv('after_prediction.csv',index=False)
 
     result = combine_predicted_information(predicted_proteins,combined_data)
 
