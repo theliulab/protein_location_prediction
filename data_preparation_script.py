@@ -9,7 +9,7 @@ def get_localization_marker_information(data, uniprot):
     subcellular_location_list = []
 
     for i in data.index:
-        protein_name = re.sub("^[^\\|]*\\|([^\\|]+)\\|.*$", "\\1", data['protein_a'][i])
+        protein_name = re.sub("^[^\\|]*\\|([^\\|]+)\\|.*$", "\\1", data['Protein1'][i])
 
         # skip if protein not in uniprot list
         if (uniprot['Entry'].eq(protein_name).any()) is False:
@@ -49,7 +49,7 @@ def get_transmembrane_information(data, uniprot):
     transmembrane_list = []
 
     for i in data.index:
-        protein_name = re.sub("^[^\\|]*\\|([^\\|]+)\\|.*$", "\\1", data['protein_a'][i])
+        protein_name = re.sub("^[^\\|]*\\|([^\\|]+)\\|.*$", "\\1", data['Protein1'][i])
 
         # skip if protein not in uniprot list
         if (uniprot['Entry'].eq(protein_name).any()) is False:
@@ -88,7 +88,7 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
     transmembrane_list = []
 
     genes = ['gene_a', 'gene_b']
-    proteins = ['protein_a', 'protein_b']
+    proteins = ['Protein1', 'Protein2']
 
     for i in data.index:
         for q in range(len(genes)):
@@ -97,7 +97,11 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
             protein = re.sub("^[^\\|]*\\|([^\\|]+)\\|.*$", "\\1", data[proteins[q]][i])
 
             # get all crosslinks as list
-            crosslinks = data.iloc[i]['crosslinks_ab']
+            if (genes[q] == genes[0]):
+                crosslinks = data.iloc[i]['crosslinks_a']
+            elif (genes[q] == genes[1]):
+                crosslinks = data.iloc[i]['crosslinks_b']
+
             crosslinks_split = crosslinks.split('#')
 
             if gene in gene_helper_list:
@@ -106,25 +110,42 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
             gene_helper_list.append(gene)
 
             # get all crosslinks for this gene by adding crosslinks where its gene_b
-            gene_b_rows = data.loc[data['gene_b'] == gene]
+           # gene_b_rows = data.loc[data['gene_b'] == gene]
 
             # if crosslinked gene is not gene_a/gene_b and not in data table, add it
             # gather all its crosslinks for prediction
             # if gene is gene_a, it has all its possible crosslinks. not the case if gene is gene_b
-            for n in list(range(gene_b_rows.shape[0])):
-                xlink = gene_b_rows.iloc[n]['crosslinks_ab']
-                xlink_split = xlink.split('#')
+            # for n in list(range(gene_b_rows.shape[0])):
+            #     xlink = str(gene_b_rows.iloc[n]['crosslinks_b'])
+            #     xlink_split = xlink.split('#')
+            #
+            #     for o in xlink_split:
+            #         sp = o.split('-')
+            #
+            #         if len(sp) < 4:
+            #             print('h')
+            #
+            #
+            #         if gene == sp[0] and o not in crosslinks_split:
+            #             crosslinks_split.append(o)
+            #         elif gene == sp[2]:
+            #             reversed_link = sp[2] + '-' + sp[3] + '-' + sp[0] + '-' + sp[1]
+            #             if reversed_link not in crosslinks_split:
+            #                 crosslinks_split.append(reversed_link)
 
-                for o in xlink_split:
-                    sp = o.split('-')
+            # # if its already in gene list
+            # if gene in gene_list:
+            #     xlinks_found = crosslinks_list[gene_list.index(gene)]
+            #     for n in xlinks_found:
+            #         sp = n.split('-')
+            #
+            #         if gene == sp[0] and n not in crosslinks_split:
+            #             crosslinks_split.append(n)
+            #         elif gene == sp[2]:
+            #             reversed_link = sp[2] + '-' + sp[3] + '-' + sp[0] + '-' + sp[1]
+            #             if reversed_link not in crosslinks_split:
+            #                 crosslinks_split.append(reversed_link)
 
-
-                    if gene == sp[0] and o not in crosslinks_split:
-                        crosslinks_split.append(o)
-                    elif gene == sp[2]:
-                        reversed_link = sp[2] + '-' + sp[3] + '-' + sp[0] + '-' + sp[1]
-                        if reversed_link not in crosslinks_split:
-                            crosslinks_split.append(reversed_link)
 
             crosslinks_inter = []
             # get inter-links
@@ -132,7 +153,7 @@ def combine_lm_transmem_and_proteins(data, lm_data, transmem_data):
                 xl = m.split('-')
                 if gene == xl[0] and xl[0] != xl[2] and m not in crosslinks_inter:
                     crosslinks_inter.append('-'.join(xl))
-                elif gene == [2]:
+                elif gene == xl[2]:
                     rev_xlink = xl[2] + '-' + xl[3] + '-' + xl[0] + '-' + xl[1]
                     if rev_xlink not in crosslinks_inter:
                         crosslinks_inter.append(rev_xlink)
@@ -422,8 +443,7 @@ def change_crosslinks_for_MTproteins(data):
 if __name__ == '__main__':
     # adjust your data paths
     data = pd.read_csv(
-        '../protein_location_prediction_local/SS_unique_lys_crosslink_targetonly_2FDR_separate_all_exported_XlinkCyNET.csv',
-        sep=' ')
+        'lysine_xlinks_xlilo.csv',sep=';',dtype='str')
     uniprot = pd.read_csv('../protein_location_prediction_local/uniprotkb_AND_reviewed_true_AND_model_o_2023_07_18.tsv',
                           sep='\t', header=0)
 
@@ -433,10 +453,10 @@ if __name__ == '__main__':
     transmem_data = get_transmembrane_information(data, uniprot)
     transmem_data = transmem_data.drop_duplicates(subset=['gene'], keep='first')
 
-    updated_data = change_crosslinks_for_MTproteins(data)
+    #updated_data = change_crosslinks_for_MTproteins(data)
 
     # combine and extend transmembrane proteins to multiple row
-    combined_data = combine_lm_transmem_and_proteins(updated_data, lm_data, transmem_data)
+    combined_data = combine_lm_transmem_and_proteins(data, lm_data, transmem_data)
 
     combined_data.to_csv('combined_data.csv', index=False)
     print('done')
