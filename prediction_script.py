@@ -11,8 +11,6 @@ def predict_protein_location_1epoch(proteins):
 
     proteins['crosslinks'] = proteins['crosslinks'].fillna("")
     for i in proteins.index:
-        if pd.isna(proteins.iloc[i]['subcellular_location']):
-            continue
 
         gene = proteins.iloc[i]['gene']
         sl = proteins.iloc[i]['subcellular_location']
