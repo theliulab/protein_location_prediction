@@ -1,6 +1,9 @@
+import sys
+
 import pandas as pd
 import numpy as np
 import re
+import collections
 
 
 def get_localization_marker_information(data, uniprot):
@@ -407,7 +410,7 @@ def change_crosslinks_for_MTproteins(data):
 
 
 def add_topology_information(data,uniprot):
-    gene_helper_list = []
+    protein_helper_list = []
 
     gene_list = []
     protein_list = []
@@ -416,8 +419,14 @@ def add_topology_information(data,uniprot):
     topology_list = []
     transmembrane_list = []
 
+    data['transmembrane'] = combined_data['transmembrane'].fillna("")
     for i in data.index:
         protein = data.iloc[i]['protein']
+
+        if protein in protein_helper_list:
+            continue
+        else:
+            protein_helper_list.append(protein)
 
         sub = data.loc[data['protein'] == protein]
 
@@ -427,7 +436,7 @@ def add_topology_information(data,uniprot):
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
-            topology_list.extend("" * len(sub.index))
+            topology_list.extend([""] * len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
             continue
 
@@ -436,7 +445,7 @@ def add_topology_information(data,uniprot):
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
-            topology_list.extend(""*len(sub.index))
+            topology_list.extend([""]*len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
             continue
 
@@ -445,18 +454,18 @@ def add_topology_information(data,uniprot):
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
-            topology_list.extend("" * len(sub.index))
+            topology_list.extend([""] * len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
             continue
 
         topology_uniprot = uniprot.loc[uniprot['Entry'] == protein, 'Topological domain'].values[0]
 
-        if pd.isnull(topology_uniprot):
+        if pd.isnull(topology_uniprot) or topology_uniprot == "":
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
-            topology_list.extend("" * len(sub.index))
+            topology_list.extend([""] * len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
             continue
 
@@ -468,60 +477,125 @@ def add_topology_information(data,uniprot):
         topo_locations = []
         for j in topologies:
             topo_split = j.split(";")
-            topo_start.append(topo_split[0].split("..")[0])
-            topo_end.append(topo_split[0].split("..")[1])
-            topo_locations.append(re.findall('"(.*?)"', topo_split[1])[0])
+            if ".." in topo_split[0]:
+                topo_start.append(int(topo_split[0].split("..")[0]))
+                topo_end.append(int(topo_split[0].split("..")[1]))
+                topo_locations.append(re.findall('"(.*?)"', topo_split[1])[0])
+            else:
+                topo_start.append(int(topo_split[0]))
+                topo_end.append(sys.maxsize)
+                topo_locations.append(re.findall('"(.*?)"', topo_split[1])[0])
 
         topology_info = pd.DataFrame({'start': topo_start, 'end': topo_end, 'topo': topo_locations})
 
         # loop over subset of protein and add topology based on transmembrane regions
-        for k in sub.index:
+        #test = range(len(sub.index))
+        for k in range(len(sub.index)):
             # dont add topology if it has a transmembrane region in this row
-            if sub.iloc[k]['transmembrane'] is not "":
+            if k == len(sub.index):
+                gene_list.append(sub.iloc[k-1]['gene'])
+                protein_list.append(sub.iloc[k-1]['protein'])
+                crosslinks_list.append(sub.iloc[k-1]['crosslinks'])
+                subcellular_location_list.append(sub.iloc[k-1]['subcellular_location'])
+                topology_list.append(topology_info.iloc[len(topology_info.index)]['topo'])
+                transmembrane_list.append(sub.iloc[k-1]['transmembrane'])
+                continue
+
+            if sub.iloc[k]['transmembrane'] != "":
                 gene_list.append(sub.iloc[k]['gene'])
                 protein_list.append(sub.iloc[k]['protein'])
                 crosslinks_list.append(sub.iloc[k]['crosslinks'])
                 subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
-                topology_list.append(sub.iloc[k]['topology'])
+                topology_list.append("")
                 transmembrane_list.append(sub.iloc[k]['transmembrane'])
+                continue
 
             # consider cases for first and last row again
             if k == 0:
                 # check if any end of topology region is smaller than following transmembrane start
-                transmembrane_start = (sub.iloc[k+1]['transmembrane']).split('..')[0]
-                res = list(filter(lambda i: i < transmembrane_start, list(topology_info["end"])))[0]
-                gene_list.append(sub.iloc[k]['gene'])
-                protein_list.append(sub.iloc[k]['protein'])
-                crosslinks_list.append(sub.iloc[k]['crosslinks'])
-                subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
-                topology_list.append(topology_info.iloc[res]['topo'])
-                transmembrane_list.append(sub.iloc[k]['transmembrane'])
-
-            if k != 0 and k != (len(sub.index)-1):
-                transmembrane_end = (sub.iloc[k+1]['transmembrane']).split('..')[0]
-                transmembrane_start = (sub.iloc[k-1]['transmembrane']).split('..')[1]
-
-
-                res_start = list(filter(lambda i: i > transmembrane_end, list(topology_info["end"])))[0]
-                res_end = list(filter(lambda i: i < transmembrane_start, list(topology_info["start"])))[0]
-
-                # if res_end == res_start then its the same row
-                if res_start == res_end:
+                transmembrane_start = int((sub.iloc[k+1]['transmembrane']).split('..')[0])
+                #res = list(filter(lambda i: i < transmembrane_start, list(topology_info["end"])))[0]
+                res = topology_info.index[topology_info["end"] < transmembrane_start].tolist()
+                if not res:
                     gene_list.append(sub.iloc[k]['gene'])
                     protein_list.append(sub.iloc[k]['protein'])
                     crosslinks_list.append(sub.iloc[k]['crosslinks'])
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
-                    topology_list.append(topology_info.iloc[res_start]['topo'])
+                    topology_list.append("topology_info.iloc[res[0]]['topo']")
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
+                else:
+                    gene_list.append(sub.iloc[k]['gene'])
+                    protein_list.append(sub.iloc[k]['protein'])
+                    crosslinks_list.append(sub.iloc[k]['crosslinks'])
+                    subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
+                    topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
+                    transmembrane_list.append(sub.iloc[k]['transmembrane'])
+
+            if k != 0 and k != (len(sub.index)-1):
+                transmembrane_end = int((sub.iloc[(k-1)]['transmembrane']).split('..')[0])
+                transmembrane_start = int((sub.iloc[(k+1)]['transmembrane']).split('..')[1])
+
+                # check if any start of topology region is larger than tm end before
+                #res_start = list(filter(lambda i: i > transmembrane_end, list(topology_info["start"])))[0]
+                res_start = topology_info.index[topology_info["start"] > transmembrane_end].tolist()
+                # check if any end of topology region is smaller than following tm start
+                #res_end = list(filter(lambda i: i < transmembrane_start, list(topology_info["end"])))[0]
+                res_end = topology_info.index[topology_info["end"] > transmembrane_start].tolist()
+
+                # intersection of residues
+                set_start = set(res_start)
+                set_end = set(res_end)
+                idx = set_start.intersection(set_end)
+
+                #print(idx)
+                if not idx:
+                    gene_list.append(sub.iloc[k]['gene'])
+                    protein_list.append(sub.iloc[k]['protein'])
+                    crosslinks_list.append(sub.iloc[k]['crosslinks'])
+                    subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
+                    topology_list.append("")
+                    transmembrane_list.append(sub.iloc[k]['transmembrane'])
+                    continue
+                #idx = collections.Counter(res_start) & collections.Counter(res_end)
+                #res = list(idx.elements())
+                res = list(idx)
+                #print(res)
+                # if res_end == res_start then its the same row
+                #if int(res_start) == int(res_end):
+
+                gene_list.append(sub.iloc[k]['gene'])
+                protein_list.append(sub.iloc[k]['protein'])
+                crosslinks_list.append(sub.iloc[k]['crosslinks'])
+                subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
+                topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
+                transmembrane_list.append(sub.iloc[k]['transmembrane'])
 
                 # TODO what if its not equal
 
-            #if k == len(sub.index)-1:
+            if k == len(sub.index)-1:
+                # if its last only take tm region before and add another row
+                transmembrane_end = int((sub.iloc[k - 1]['transmembrane']).split('..')[0])
+                #res = list(filter(lambda i: i > transmembrane_end, list(topology_info["start"])))[0]
+                res = topology_info.index[topology_info["start"] > transmembrane_end].tolist()
+                if not res:
+                    gene_list.append(sub.iloc[k]['gene'])
+                    protein_list.append(sub.iloc[k]['protein'])
+                    crosslinks_list.append(sub.iloc[k]['crosslinks'])
+                    subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
+                    topology_list.append("")
+                    transmembrane_list.append(sub.iloc[k]['transmembrane'])
+                else:
+                    gene_list.append(sub.iloc[k]['gene'])
+                    protein_list.append(sub.iloc[k]['protein'])
+                    crosslinks_list.append(sub.iloc[k]['crosslinks'])
+                    subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
+                    topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
+                    transmembrane_list.append(sub.iloc[k]['transmembrane'])
 
-
-
-
-    return #new_data
+    new_data = pd.DataFrame({'gene': gene_list, 'protein': protein_list, 'crosslinks': crosslinks_list,
+                             'topology': topology_list, 'subcellular_location': subcellular_location_list,
+                             'transmembrane': transmembrane_list})
+    return new_data
 
 
 if __name__ == '__main__':
@@ -547,5 +621,6 @@ if __name__ == '__main__':
 
     combined_data_with_topology = add_topology_information(combined_data,uniprot)
 
-    #combined_data.to_csv('combined_data.csv', index=False)
-    print('done')
+    combined_data.to_csv('combined_data.csv', index=False)
+    combined_data_with_topology.to_csv('combined_data_with_topology.csv',index=False)
+    print('csv saved')
