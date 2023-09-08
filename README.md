@@ -11,6 +11,7 @@
   | gene_a| gene_b | Protein1 | Protein2 | n_score_a | n_score_b | LinkPos1 | LinkPos2 | crosslink_score | crosslink_ab | crosslinks_a | crosslinks_b |
 - reviewed uniprot informatio downloaded as tsv with the following columns:
   | Entry | Protein names | Gene Names | Subcellular location [CC] | Topological domain | Transmembrane |
+  | :--- | :---: | ---: | :--- | :---: | ---: |
 
 #### Method description
 - get localization markers by checking which proteins in xlink data have
@@ -31,7 +32,7 @@
 - topology information for proteins with transmembrane regions will be added from uniprot data and ordered according to its transmembrane regions
 - the output is a combined table, which will is saved and can later on be changed manually
   |gene | protein | crosslinks | topology | subcellular_location | transmembrane |
-
+  | :--- | :---: | ---: | :--- | :---: | ---: |
   
 ### Prediction script
 #### Input
@@ -45,3 +46,4 @@
 - afterwards, all predicted residues of a protein will be aggregated and ordered via their residue numbers
 - the output table in the following format is saved
   | predicted_gene | predicting_gene | predicted_gene_residue | predicting_gene_residue | predicted_subcellular_location | predicted_topology | predicting_crosslinks | predicted_by_transmembrane | transmembrane_regions | predicting_gene_is_lm |
+  | :--- | :---: | ---: | :--- | :---: | ---: | ---: | :--- | :---: | ---: |
