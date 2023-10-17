@@ -1,5 +1,5 @@
-# Prediction of protein locations by XL-MS data
-This software takes cross-linking mass spectrometry data to predict the location of proteins by direct interactions and defined localization marker.
+# Prediction of protein location by cross-linking mass spectrometry data
+This software takes cross-linking mass spectrometry (XL-MS) data to predict the location of proteins by direct interactions and defined localization marker.
 
 ## Python script - One Epoch
 
