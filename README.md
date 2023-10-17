@@ -1,4 +1,6 @@
 # Prediction of protein locations by XL-MS data
+This software takes cross-linking mass spectrometry data to predict the location of proteins by direct interactions and defined localization marker.
+
 ## Python script - One Epoch
 
 ### Script execution
@@ -9,7 +11,7 @@
 #### Input
 - crosslinking (xlink) information in the following format:
   | gene_a| gene_b | Protein1 | Protein2 | n_score_a | n_score_b | LinkPos1 | LinkPos2 | crosslink_score | crosslink_ab | crosslinks_a | crosslinks_b |
-- reviewed uniprot informatio downloaded as tsv with the following columns:
+- reviewed uniprot information downloaded as tsv with the following columns:
   | Entry | Protein names | Gene Names | Subcellular location [CC] | Topological domain | Transmembrane |
   | :--- | :---: | ---: | :--- | :---: | ---: |
 
