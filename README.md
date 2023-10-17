@@ -9,7 +9,7 @@ This software takes cross-linking mass spectrometry (XL-MS) data to predict the 
 ### Data preparation script
 
 #### Input
-- crosslinking (xlink) information in the following format:
+- crosslinking (xlink) information in the following format: 
   | gene_a| gene_b | Protein1 | Protein2 | n_score_a | n_score_b | LinkPos1 | LinkPos2 | crosslink_score | crosslink_ab |crosslinks_a | crosslinks_b |
   | :--- | :---: | :---: | :---: | :---: |  :---: | :---: | :---: | :---: | ---: |
 - reviewed uniprot information downloaded as tsv with the following columns:
