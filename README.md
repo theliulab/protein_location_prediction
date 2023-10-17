@@ -32,8 +32,8 @@ This software takes cross-linking mass spectrometry (XL-MS) data to predict the 
       | Protein1 |           | 5..9 |
       | Protein1 | P1-11-P8-5 | |
 
-- topology information for proteins with transmembrane regions will be added from uniprot data and ordered according to its transmembrane regions
-- the output is a combined table, which will is saved and can later on be changed manually
+- topology information for proteins with transmembrane regions will be added from uniprot data and ordered according to their transmembrane regions
+- the output is a combined table, which will be saved and can be changed manually
   |gene | protein | crosslinks | topology | subcellular_location | transmembrane |
   | :--- | :---: | :---: | :--- | :---: | ---: |
   
@@ -42,11 +42,10 @@ This software takes cross-linking mass spectrometry (XL-MS) data to predict the 
 - combined table (output for the data preparation script)
 
 #### Method description
-- if transmembrane regions were changed, crosslinks, subcellular locations and topology will be reorderd for each protein
+- if transmembrane regions were changed, crosslink, subcellular location and topology information will be reorderd for each protein
 - a localization marker column is added, indicating proteins with an already known and thus starting location/topology as True, unknown proteins or transmembrane regions as False
-- the prediction is done by using crosslinked residues of each row of a protein to identify the crosslinked residues of another protein, and assigning topology as well as subcellular location to it
-  residues to a new data frame
+- the prediction is done by using the crosslinked residue of each row of a protein to identify the residue of a linked protein, and assigning topology as well as subcellular location 
 - afterwards, all predicted residues of a protein will be aggregated and ordered via their residue numbers
-- the output table in the following format is saved
+- the following output table will be saved
   | predicted_gene | predicting_gene | predicted_gene_residue | predicting_gene_residue | predicted_subcellular_location | predicted_topology | predicting_crosslinks | predicted_by_transmembrane | transmembrane_regions | predicting_gene_is_lm |
   | :--- | :---: | :---: | :---: | :---: | :---: | :---: | :---: | :---: | ---: |
