@@ -422,7 +422,8 @@ def add_topology_information(data,uniprot):
     data['transmembrane'] = combined_data['transmembrane'].fillna("")
     for i in data.index:
         protein = data.iloc[i]['protein']
-
+        if data.iloc[i]['gene'] == "TMEM126A":
+            print()
         if protein in protein_helper_list:
             continue
         else:
@@ -501,7 +502,7 @@ def add_topology_information(data,uniprot):
                 transmembrane_list.append(sub.iloc[k-1]['transmembrane'])
                 continue
 
-            if sub.iloc[k]['transmembrane'] != "":
+            elif sub.iloc[k]['transmembrane'] != "":
                 gene_list.append(sub.iloc[k]['gene'])
                 protein_list.append(sub.iloc[k]['protein'])
                 crosslinks_list.append(sub.iloc[k]['crosslinks'])
@@ -511,7 +512,7 @@ def add_topology_information(data,uniprot):
                 continue
 
             # consider cases for first and last row again
-            if k == 0:
+            elif k == 0:
                 # check if any end of topology region is smaller than following transmembrane start
                 transmembrane_start = int((sub.iloc[k+1]['transmembrane']).split('..')[0])
                 #res = list(filter(lambda i: i < transmembrane_start, list(topology_info["end"])))[0]
@@ -521,7 +522,7 @@ def add_topology_information(data,uniprot):
                     protein_list.append(sub.iloc[k]['protein'])
                     crosslinks_list.append(sub.iloc[k]['crosslinks'])
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
-                    topology_list.append("topology_info.iloc[res[0]]['topo']")
+                    topology_list.append("")
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
                 else:
                     gene_list.append(sub.iloc[k]['gene'])
@@ -531,7 +532,7 @@ def add_topology_information(data,uniprot):
                     topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
 
-            if k != 0 and k != (len(sub.index)-1):
+            elif k != 0 and k != (len(sub.index)-1):
                 transmembrane_end = int((sub.iloc[(k-1)]['transmembrane']).split('..')[0])
                 transmembrane_start = int((sub.iloc[(k+1)]['transmembrane']).split('..')[1])
 
@@ -545,7 +546,7 @@ def add_topology_information(data,uniprot):
                 # intersection of residues
                 set_start = set(res_start)
                 set_end = set(res_end)
-                idx = set_start.intersection(set_end)
+                idx = set(res_start)^set(res_end)
 
                 #print(idx)
                 if not idx:
@@ -572,7 +573,7 @@ def add_topology_information(data,uniprot):
 
                 # TODO what if its not equal
 
-            if k == len(sub.index)-1:
+            elif k == len(sub.index)-1:
                 # if its last only take tm region before and add another row
                 transmembrane_end = int((sub.iloc[k - 1]['transmembrane']).split('..')[0])
                 #res = list(filter(lambda i: i > transmembrane_end, list(topology_info["start"])))[0]
