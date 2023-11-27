@@ -1,8 +1,21 @@
+"""
+@author: Julia Ruta
+Script predicting the location of a protein based cross-link
+information and localization marker. A localization marker
+is a protein with a unique subcellular location, or in case
+of membrane proteins a unique location of a topological
+domain.
+"""
 import pandas as pd
 import numpy as np
 
 def predict_protein_location_1epoch(proteins):
-
+    """
+    method predicting the location of proteins via
+    cross-links to a localization marker
+    :param proteins:
+    :return: new_data
+    """
     predicted_gene_list = []
     predicting_gene_list = []
     crosslinks_list = []
@@ -19,11 +32,10 @@ def predict_protein_location_1epoch(proteins):
         gene = proteins.iloc[i]['gene']
         sl = proteins.iloc[i]['subcellular_location']
         topo = proteins.iloc[i]['topology']
+        is_lm = proteins.iloc[i]['is_localization_marker']
 
-        if sl == "" and topo == "":
-            lm = False
-        else:
-            lm = True
+        if is_lm == "FALSE":
+            continue
 
         crosslinks_raw = proteins.iloc[i]['crosslinks']
 
@@ -43,7 +55,7 @@ def predict_protein_location_1epoch(proteins):
             crosslinks_list.append(j)
             predicted_subcellular_location_list.append(sl)
             predicted_topology_list.append(topo)
-            is_localization_marker_list.append(lm)
+            is_localization_marker_list.append(is_lm)
 
             if pd.isna(proteins.iloc[i]['transmembrane']):
                 predicted_by_transmembrane_list.append(np.nan)
@@ -60,6 +72,13 @@ def predict_protein_location_1epoch(proteins):
     return new_data
 
 def combine_predicted_information(proteins,combined_data):
+    """
+    method combining all predicted locations and transmembrane
+    as well as topology information for a proteins
+    :param proteins:
+    :param combined_data:
+    :return: new_data
+    """
     gene_helper_list = []
 
     predicted_gene_list = []
@@ -122,6 +141,13 @@ def combine_predicted_information(proteins,combined_data):
 
 # function update crosslinks in proteins according to transmembrane regions
 def update_xlinks_transmembrane(combined_data):
+    """
+    method updating the information of proteins by taking manual edits
+    in the csv and reordering topological and transmembrane domains
+    for a protein
+    :param combined_data:
+    :return: new_data
+    """
     gene_helper_list = []
 
     gene_list = []
@@ -130,6 +156,7 @@ def update_xlinks_transmembrane(combined_data):
     topology_list = []
     crosslinks_list = []
     transmembrane_list = []
+    is_lm_list = []
 
     combined_data['transmembrane'] = combined_data['transmembrane'].fillna('')
     combined_data['crosslinks'] = combined_data['crosslinks'].fillna("")
@@ -158,6 +185,7 @@ def update_xlinks_transmembrane(combined_data):
             topology_list.extend(sub.topology)
             crosslinks_list.extend(sub.crosslinks)
             transmembrane_list.extend(sub.transmembrane)
+            is_lm_list.extend(sub.is_localization_marker)
             continue
 
         if (sub.transmembrane != '').sum() == 0:
@@ -167,6 +195,7 @@ def update_xlinks_transmembrane(combined_data):
             topology_list.append(sub.iloc[0]['topology'])
             crosslinks_list.append(sub.iloc[0]['crosslinks'])
             transmembrane_list.append(sub.iloc[0]['transmembrane'])
+            is_lm_list.append(sub.iloc[0]['is_localization_marker'])
 
         elif (sub.transmembrane != '').sum() == 1:
             # get crosslinks before and after and order them new
@@ -198,6 +227,7 @@ def update_xlinks_transmembrane(combined_data):
             crosslinks_list.extend(
                 ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm), '#'.join(crosslinks_after_tm)))
             transmembrane_list.extend((np.nan, reg, np.nan))
+            is_lm_list.extend((sub.iloc[0]['is_localization_marker'], "FALSE", sub.iloc[2]['is_localization_marker']))
 
         elif (sub.transmembrane != '').sum() == 2:
             transmem_regions = sub.loc[sub['transmembrane'] != '', 'transmembrane'].values
@@ -236,6 +266,7 @@ def update_xlinks_transmembrane(combined_data):
                     crosslinks_list.extend(
                         ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm)))
                     transmembrane_list.extend((np.nan, transmem_regions[j]))
+                    is_lm_list.extend((sub.loc[index_transmembrane[0] - 1]['is_localization_marker'], "FALSE"))
 
                 elif transmem_regions[j] == transmem_regions[len(transmem_regions) - 1]:
                     transmem_before = transmem_regions[j - 1].split('..')
@@ -258,6 +289,8 @@ def update_xlinks_transmembrane(combined_data):
                     crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm),
                                             '#'.join(crosslinks_after_tm)))
                     transmembrane_list.extend((np.nan, transmem_regions[j], np.nan))
+                    is_lm_list.extend((sub.loc[index_transmembrane[0] - 1]['is_localization_marker'], "FALSE",
+                                       sub.loc[index_transmembrane[0] + 1]['is_localization_marker']))
 
         elif (sub.transmembrane != '').sum() > 2:
             transmem_regions = sub.loc[sub['transmembrane'] != '', 'transmembrane'].values
@@ -296,6 +329,8 @@ def update_xlinks_transmembrane(combined_data):
                     crosslinks_list.extend(
                         ('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm)))
                     transmembrane_list.extend((np.nan, transmem_regions[j]))
+                    is_lm_list.extend((sub.loc[index_transmembrane[0] - 1]['is_localization_marker'], "FALSE"))
+
                 # if neither first nor last tm region, take links before, in and after tm
                 elif transmem_regions[j] != transmem_regions[0] and transmem_regions[j] != transmem_regions[
                     len(transmem_regions) - 1]:
@@ -316,6 +351,8 @@ def update_xlinks_transmembrane(combined_data):
                     topology_list.extend((topology_before, np.nan))
                     crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm)))
                     transmembrane_list.extend((np.nan, transmem_regions[j]))
+                    is_lm_list.extend((sub.loc[index_transmembrane[0] - 1]['is_localization_marker'], "FALSE"))
+
                 # if last tm, take links in and after tm region
                 elif transmem_regions[j] == transmem_regions[len(transmem_regions) - 1]:
                     transmem_before = transmem_regions[j - 1].split('..')
@@ -338,12 +375,15 @@ def update_xlinks_transmembrane(combined_data):
                     crosslinks_list.extend(('#'.join(crosslinks_before_tm), '#'.join(crosslinks_in_tm),
                                             '#'.join(crosslinks_after_tm)))
                     transmembrane_list.extend((np.nan, transmem_regions[j], np.nan))
+                    is_lm_list.extend((sub.loc[index_transmembrane[0] - 1]['is_localization_marker'], "FALSE",
+                                       sub.loc[index_transmembrane[0] + 1]['is_localization_marker']))
 
     new_data = pd.DataFrame({'gene': gene_list, 'protein': protein_list,
                              'subcellular_location': subcellular_location_list,
                              'topology': topology_list,
                              'crosslinks': crosslinks_list,
-                             'transmembrane': transmembrane_list})
+                             'transmembrane': transmembrane_list,
+                             'is_localization_marker': is_lm_list})
 
     return new_data
 
@@ -360,6 +400,6 @@ if __name__ == '__main__':
     result = combine_predicted_information(predicted_proteins,data)
 
     result2 = result.sort_values(by=['predicted_gene','predicted_gene_residue'], ascending=True)
-    result2.reset_index().to_csv('prediction_result_with_topology.csv', index=False)
+    result2.reset_index().to_csv('prediction_result_with_topology_lm.csv', index=False)
 
     print('done')
