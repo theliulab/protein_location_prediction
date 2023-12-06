@@ -361,7 +361,7 @@ def add_topology_information(data,uniprot):
 
     data['transmembrane'] = data['transmembrane'].fillna("")
     data['subcellular_location'] = data['subcellular_location'].fillna("")
-
+     # TODO its not returning any membrane proteins as lm
     for i in data.index:
         is_lm = ""
         protein = data.iloc[i]['protein']
@@ -369,25 +369,17 @@ def add_topology_information(data,uniprot):
             continue
         else:
             protein_helper_list.append(protein)
-
+        #if 'NDUFB1' is data.iloc[i]['gene']:
+        #    print(('hi'))
         sub = data.loc[data['protein'] == protein]
+        number_tm_regions = len(sub[sub['transmembrane'] != ''])
 
         # if no mito protein, continue
         mask = [bool(re.search(p, s)) for p, s in zip('itoch',sub['subcellular_location'])]
 
         # only add topology for mito proteins with unique subcellular location
         # if no transmembrane regions, dont consider topological domains
-        if sum(mask) == 0 or len(sub.index) < 2:
-            gene_list.extend(sub['gene'].tolist())
-            protein_list.extend(sub['protein'].tolist())
-            crosslinks_list.extend(sub['crosslinks'].tolist())
-            subcellular_location_list.extend(sub['subcellular_location'].tolist())
-            topology_list.extend([""] * len(sub.index))
-            transmembrane_list.extend(sub['transmembrane'].tolist())
-            is_lm_list.extend(sub['is_localization_marker'].tolist())
-            continue
-
-        if (uniprot['Entry'].eq(protein).any()) is False:
+        if sum(mask) == 0 or (len(sub.index) < 2):
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
@@ -397,26 +389,29 @@ def add_topology_information(data,uniprot):
             is_lm_list.extend(sub['is_localization_marker'].tolist())
             continue
 
-        if len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain']) == 0:
+        test =len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain'])
+        if number_tm_regions > 0 and len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain']) == 0:
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
             topology_list.extend([""] * len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
-            is_lm_list.extend(sub['is_localization_marker'].tolist())
+            is_lm_list.extend(["FALSE"] * len(sub.index))
             continue
 
         topology_uniprot = uniprot.loc[uniprot['Entry'] == protein, 'Topological domain'].values[0]
 
-        if pd.isnull(topology_uniprot) or topology_uniprot == "":
+        # if is membrane protein and does not have topology information
+        if (number_tm_regions > 0 and pd.isnull(topology_uniprot)) or \
+                (number_tm_regions > 0 and topology_uniprot == ""):
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
             topology_list.extend([""] * len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
-            is_lm_list.extend(sub['is_localization_marker'].tolist())
+            is_lm_list.extend(["FALSE"] * len(sub.index))
             continue
 
         topologies = re.findall("TOPO_DOM (.+?); \/evidence", topology_uniprot)
@@ -429,6 +424,10 @@ def add_topology_information(data,uniprot):
         for j in topologies:
             topo_split = j.split(";")
             if ".." in topo_split[0]:
+
+                if topo_split[0].split("..")[1] == '?':
+                    continue
+
                 topo_start.append(int(topo_split[0].split("..")[0]))
                 topo_end.append(int(topo_split[0].split("..")[1]))
                 topo_loc = re.findall('"(.*?)"', topo_split[1])[0]
@@ -440,7 +439,7 @@ def add_topology_information(data,uniprot):
             else:
                 topo_start.append(int(topo_split[0]))
                 topo_end.append(sys.maxsize)
-                ttopo_loc = re.findall('"(.*?)"', topo_split[1])[0]
+                topo_loc = re.findall('"(.*?)"', topo_split[1])[0]
                 topo_locations.append(topo_loc)
                 if topo_loc.count('note') < 2:
                     topo_is_lm.append("true")
@@ -448,6 +447,19 @@ def add_topology_information(data,uniprot):
                     topo_is_lm.append("false")
 
         topology_info = pd.DataFrame({'start': topo_start, 'end': topo_end, 'topo': topo_locations,'is_lm': topo_is_lm})
+
+        # if number of topology information is != number of transmembrane regions + 1 skip it
+
+        if len(topology_info.index) < (number_tm_regions + 1):
+            gene_list.extend(sub['gene'].tolist())
+            protein_list.extend(sub['protein'].tolist())
+            crosslinks_list.extend(sub['crosslinks'].tolist())
+            subcellular_location_list.extend(sub['subcellular_location'].tolist())
+            topology_list.extend([""] * len(sub.index))
+            transmembrane_list.extend(sub['transmembrane'].tolist())
+            #test = "FALSE" * len(sub.index)
+            is_lm_list.extend(["FALSE"] * len(sub.index))
+            continue
 
         # loop over subset of protein and add topology based on transmembrane regions
         #test = range(len(sub.index))
@@ -460,7 +472,7 @@ def add_topology_information(data,uniprot):
                 subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                 topology_list.append("")
                 transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                is_lm_list.append(sub.iloc[k]['is_localization_marker'])
+                is_lm_list.append("FALSE")
                 continue
 
             if k == len(sub.index):
@@ -470,7 +482,7 @@ def add_topology_information(data,uniprot):
                 subcellular_location_list.append(sub.iloc[k-1]['subcellular_location'])
                 topology_list.append(topology_info.iloc[len(topology_info.index)]['topo'])
                 transmembrane_list.append(sub.iloc[k-1]['transmembrane'])
-                is_lm_list.append(topology_info.iloc[len(topology_info.index)]['is_lm'])
+                is_lm_list.append("TRUE")
                 continue
 
             # consider cases for first and last row again
@@ -486,7 +498,7 @@ def add_topology_information(data,uniprot):
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                     topology_list.append("")
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                    is_lm_list.append(sub.iloc[k]['is_localization_marker'])
+                    is_lm_list.append("TRUE")
                 else:
                     gene_list.append(sub.iloc[k]['gene'])
                     protein_list.append(sub.iloc[k]['protein'])
@@ -494,7 +506,7 @@ def add_topology_information(data,uniprot):
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                     topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                    is_lm_list.append(topology_info.iloc[res[len(res)-1]]['is_lm'])
+                    is_lm_list.append("TRUE")
 
             elif k != 0 and k != (len(sub.index)-1):
                 transmembrane_end = int((sub.iloc[(k-1)]['transmembrane']).split('..')[0])
@@ -520,7 +532,7 @@ def add_topology_information(data,uniprot):
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                     topology_list.append("")
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                    is_lm_list.append(sub.iloc[k]['is_localization_marker'])
+                    is_lm_list.append("TRUE")
                     continue
                 #idx = collections.Counter(res_start) & collections.Counter(res_end)
                 #res = list(idx.elements())
@@ -535,7 +547,7 @@ def add_topology_information(data,uniprot):
                 subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                 topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
                 transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                is_lm_list.append(topology_info.iloc[res[len(res) - 1]]['is_lm'])
+                is_lm_list.append("TRUE")
 
                 # TODO what if its not equal
 
@@ -551,7 +563,7 @@ def add_topology_information(data,uniprot):
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                     topology_list.append("")
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                    is_lm_list.append(sub.iloc[k]['is_localization_marker'])
+                    is_lm_list.append("TRUE")
                 else:
                     gene_list.append(sub.iloc[k]['gene'])
                     protein_list.append(sub.iloc[k]['protein'])
@@ -559,7 +571,7 @@ def add_topology_information(data,uniprot):
                     subcellular_location_list.append(sub.iloc[k]['subcellular_location'])
                     topology_list.append(topology_info.iloc[res[len(res)-1]]['topo'])
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
-                    is_lm_list.append(topology_info.iloc[res[len(res) - 1]]['is_lm'])
+                    is_lm_list.append("TRUE")
 
     new_data = pd.DataFrame({'gene': gene_list, 'protein': protein_list, 'crosslinks': crosslinks_list,
                              'topology': topology_list, 'subcellular_location': subcellular_location_list,
@@ -570,7 +582,7 @@ def add_topology_information(data,uniprot):
 if __name__ == '__main__':
     # adjust your data paths
     data = pd.read_csv(
-        'lysine_xlinks_xlilo.csv',sep=';',dtype='str')
+        'lysine_xlinks_xlilo_dsso.csv',sep=';',dtype='str')
     uniprot = pd.read_csv('../protein_location_prediction_local/uniprotkb_AND_reviewed_true_AND_model_o_2023_07_18.tsv',
                           sep='\t', header=0)
 
@@ -591,8 +603,9 @@ if __name__ == '__main__':
 
     # a protein can either have a unique subcellular location, or if it has multiple topological domains
     # it must have a unique location for this domain
+    # TODO kick out proteins if they are membrane proteins but dont have topology information
     combined_data_with_topology = add_topology_information(combined_data,uniprot)
 
-    combined_data.to_csv('combined_data.csv', index=False)
-    combined_data_with_topology.to_csv('combined_data_with_topology.csv',index=False)
+    combined_data.to_csv('combined_data_dsso.csv', index=False)
+    combined_data_with_topology.to_csv('combined_data_with_topology_dsso.csv',index=False)
     print('csv saved')

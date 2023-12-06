@@ -34,7 +34,7 @@ def predict_protein_location_1epoch(proteins):
         topo = proteins.iloc[i]['topology']
         is_lm = proteins.iloc[i]['is_localization_marker']
 
-        if is_lm == "FALSE":
+        if is_lm == "FALSE" or proteins.iloc[i]['transmembrane'] != '':
             continue
 
         crosslinks_raw = proteins.iloc[i]['crosslinks']
