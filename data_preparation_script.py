@@ -582,7 +582,7 @@ def add_topology_information(data,uniprot):
 if __name__ == '__main__':
     # adjust your data paths
     data = pd.read_csv(
-        'lysine_xlinks_xlilo_dsso.csv',sep=';',dtype='str')
+        'lysine_xlinks_xlilo.csv',sep=';',dtype='str')
     uniprot = pd.read_csv('../protein_location_prediction_local/uniprotkb_AND_reviewed_true_AND_model_o_2023_07_18.tsv',
                           sep='\t', header=0)
 
@@ -606,6 +606,6 @@ if __name__ == '__main__':
     # TODO kick out proteins if they are membrane proteins but dont have topology information
     combined_data_with_topology = add_topology_information(combined_data,uniprot)
 
-    combined_data.to_csv('combined_data_dsso.csv', index=False)
-    combined_data_with_topology.to_csv('combined_data_with_topology_dsso.csv',index=False)
+    combined_data.to_csv('combined_data.csv', index=False)
+    combined_data_with_topology.to_csv('combined_data_with_topology.csv',index=False)
     print('csv saved')
