@@ -34,8 +34,8 @@ def predict_protein_location_1epoch(proteins):
         topo = proteins.iloc[i]['topology']
         is_lm = proteins.iloc[i]['is_localization_marker']
 
-        if is_lm == "FALSE" or proteins.iloc[i]['transmembrane'] != '':
-            continue
+        #if is_lm == "FALSE" or proteins.iloc[i]['transmembrane'] != '':
+        #    continue
 
         crosslinks_raw = proteins.iloc[i]['crosslinks']
 
@@ -74,7 +74,7 @@ def predict_protein_location_1epoch(proteins):
 def combine_predicted_information(proteins,combined_data):
     """
     method combining all predicted locations and transmembrane
-    as well as topology information for a proteins
+    as well as topology information for a protein
     :param proteins:
     :param combined_data:
     :return: new_data
@@ -400,6 +400,9 @@ if __name__ == '__main__':
     result = combine_predicted_information(predicted_proteins,data)
 
     result2 = result.sort_values(by=['predicted_gene','predicted_gene_residue'], ascending=True)
-    result2.reset_index().to_csv('prediction_result_with_topology_lm.csv', index=False)
+    result2.reset_index().to_csv('prediction_result_with_topology_for_ALL_lm.csv', index=False)
+
+    result3 = result2.loc[result2['predicting_gene_is_lm'] == True]
+    result3.reset_index().to_csv('prediction_result_with_topology_for_TRUE_lm.csv', index=False)
 
     print('done')
