@@ -42,15 +42,20 @@ def get_localization_marker_information(data, uniprot):
             continue
 
         location = re.search("SUBCELLULAR LOCATION: (.+?)(\\.|{)", location_uniprot).group(1)
+
         # only take mitochondrion proteins as lm
         if 'itoch' in location and 'soform' not in location and 'Mitochondrion' != location.strip():
             occ = location_uniprot.count("{")
             if occ > 1:
                 # only allowed to have multiple locations if its a membrane protein
-                if 'membrane' in location:
+                if 'membrane protein' not in location_uniprot:
                     gene_list.append(data.iloc[i]['gene_a'])
                     protein_list.append(protein_name)
-                    subcellular_location_list.append(location)
+                    subcellular_location_list.append("")
+                elif 'membrane protein' in location_uniprot:
+                    gene_list.append(data.iloc[i]['gene_a'])
+                    protein_list.append(protein_name)
+                    subcellular_location_list.append(location + '#membrane protein')
             # gene_a, protein_a, crosslinks_ab, subcellular_location, transmembrane
             else:
                 gene_list.append(data.iloc[i]['gene_a'])
@@ -365,6 +370,8 @@ def add_topology_information(data,uniprot):
     for i in data.index:
         is_lm = ""
         protein = data.iloc[i]['protein']
+        if 'NDUFS8' == data.iloc[i]['gene']:
+            print()
         if protein in protein_helper_list:
             continue
         else:
@@ -379,15 +386,35 @@ def add_topology_information(data,uniprot):
 
         # only add topology for mito proteins with unique subcellular location
         # if no transmembrane regions, dont consider topological domains
-        if sum(mask) == 0 or (len(sub.index) < 2):
+        if sum(mask) == 0:
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
             crosslinks_list.extend(sub['crosslinks'].tolist())
             subcellular_location_list.extend(sub['subcellular_location'].tolist())
-            topology_list.extend([""]*len(sub.index))
+            topology_list.extend([""] * len(sub.index))
             transmembrane_list.extend(sub['transmembrane'].tolist())
-            is_lm_list.extend(sub['is_localization_marker'].tolist())
+            is_lm_list.extend(["FALSE"] * len(sub.index))
             continue
+
+        if len(sub.index) < 2:
+            if sub['subcellular_location'].str.contains('membrane protein').any():
+                gene_list.extend(sub['gene'].tolist())
+                protein_list.extend(sub['protein'].tolist())
+                crosslinks_list.extend(sub['crosslinks'].tolist())
+                subcellular_location_list.extend(sub['subcellular_location'].tolist())
+                topology_list.extend([""]*len(sub.index))
+                transmembrane_list.extend(sub['transmembrane'].tolist())
+                is_lm_list.extend(["FALSE"] * len(sub.index))
+                continue
+            else:
+                gene_list.extend(sub['gene'].tolist())
+                protein_list.extend(sub['protein'].tolist())
+                crosslinks_list.extend(sub['crosslinks'].tolist())
+                subcellular_location_list.extend(sub['subcellular_location'].tolist())
+                topology_list.extend([""] * len(sub.index))
+                transmembrane_list.extend(sub['transmembrane'].tolist())
+                is_lm_list.extend(sub['is_localization_marker'].tolist())
+                continue
 
         test =len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain'])
         if number_tm_regions > 0 and len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain']) == 0:
