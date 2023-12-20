@@ -30,6 +30,7 @@ def predict_protein_location_1epoch(proteins):
     for i in proteins.index:
 
         gene = proteins.iloc[i]['gene']
+
         sl = proteins.iloc[i]['subcellular_location']
         topo = proteins.iloc[i]['topology']
         is_lm = proteins.iloc[i]['is_localization_marker']
@@ -40,10 +41,16 @@ def predict_protein_location_1epoch(proteins):
         crosslinks_raw = proteins.iloc[i]['crosslinks']
 
         crosslinks = crosslinks_raw.split("#")
+        crosslinks = list(set(crosslinks))
+        if gene == 'MDH2':
+            print(crosslinks[-1])
         for j in crosslinks:
             link = j.split('-')
             if len(link) < 4:
                 continue
+
+            #if link[0] == 'QTRT2' or link[2] == 'QTRT2':
+            #    print()
 
             if link[2] == gene:
                 gene_b = link[0]
@@ -166,10 +173,12 @@ def update_xlinks_transmembrane(combined_data):
     for i in combined_data.index:
         gene = combined_data.iloc[i]['gene']
         protein = combined_data.iloc[i]['protein']
+        #print(gene)
 
         if gene in gene_helper_list:
             continue
 
+        # TODO update the crosslinked genes with the manuall added crosslinks
         gene_helper_list.append(gene)
 
         sub = combined_data.loc[combined_data['gene'] == gene]
@@ -177,6 +186,25 @@ def update_xlinks_transmembrane(combined_data):
         xlinks = sub.loc[sub['crosslinks'] != '']
         joined_xlinks = xlinks.crosslinks.str.cat(sep='#')
         crosslinks_split = joined_xlinks.split('#')
+
+        # also get all other crosslinks in which it is mentioned
+        if combined_data.crosslinks.str.contains(gene + '-').any() or combined_data.crosslinks.str.contains('-' + gene + '-').any():
+            filtered_df = combined_data[combined_data["crosslinks"].str.contains(gene + '-'or'-' + gene + '-')]
+
+            # get all the crosslinks and add up those where gene is in without duplicates
+            filtered_df_xlinks = filtered_df.crosslinks.str.cat(sep='#')
+            filtered_df_crosslinks_split = filtered_df_xlinks.split('#')
+            matching = [s for s in filtered_df_crosslinks_split if gene in s]
+
+            for xl in matching:
+                # if crosslink not in crosslinks_split, add it
+                xl_idx = xl.split('-')
+                if gene == xl[0] and xl not in crosslinks_split:
+                    crosslinks_split.append('-'.join(xl_idx))
+                elif gene == xl[2]:
+                    rev_xlink = xl[2] + '-' + xl[3] + '-' + xl[0] + '-' + xl[1]
+                    if rev_xlink not in crosslinks_split:
+                        crosslinks_split.append(rev_xlink)
 
         if joined_xlinks == '':
             gene_list.extend(sub.gene)
@@ -187,6 +215,7 @@ def update_xlinks_transmembrane(combined_data):
             transmembrane_list.extend(sub.transmembrane)
             is_lm_list.extend(sub.is_localization_marker)
             continue
+
 
         if (sub.transmembrane != '').sum() == 0:
             gene_list.append(gene)
@@ -388,21 +417,21 @@ def update_xlinks_transmembrane(combined_data):
     return new_data
 
 if __name__ == '__main__':
-    combined_data = pd.read_csv('combined_data_with_topology.csv')
+    combined_data = pd.read_csv('combined_data_with_topology_defalt.csv')
 
     data = update_xlinks_transmembrane(combined_data)
 
-    data.to_csv('updated_xlinks_intermediate_with_topology.csv',index=False)
+    data.to_csv('updated_xlinks_intermediate_with_topology_defalt_new2.csv',index=False)
     # predict protein location
     predicted_proteins = predict_protein_location_1epoch(data)
-    predicted_proteins.to_csv('after_prediction_with_topology.csv',index=False)
+    predicted_proteins.to_csv('after_prediction_with_topology_deleted_mdh2_test_ying_new2.csv',index=False)
 
     result = combine_predicted_information(predicted_proteins,data)
 
     result2 = result.sort_values(by=['predicted_gene','predicted_gene_residue'], ascending=True)
-    result2.reset_index().to_csv('prediction_result_with_topology_for_ALL_lm.csv', index=False)
+    result2.reset_index().to_csv('prediction_result_with_topology_for_ALL_lm_test_ying_new2.csv', index=False)
 
     result3 = result2.loc[result2['predicting_gene_is_lm'] == True]
-    result3.reset_index().to_csv('prediction_result_with_topology_for_TRUE_lm.csv', index=False)
+    result3.reset_index().to_csv('prediction_result_with_topology_for_TRUE_lm_test_ying_new2.csv', index=False)
 
     print('done')
