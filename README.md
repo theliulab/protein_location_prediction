@@ -2,6 +2,7 @@
 The scripts in this repository utilize cross-linking mass spectrometry (XL-MS) data to predict the location and topology of proteins by direct interactions and defined localization marker.
 
 ### Summary
+- Python v 3.10
 - script execution done in IDE, e.g. PyCharm or Spyder
 - prediction is split into two steps
   1. data preparation script: gets localization and topology information from uniprot for cross-linked proteins in XL-MS data and assigns localization marker; resulting script can be edited manually
@@ -11,7 +12,7 @@ The scripts in this repository utilize cross-linking mass spectrometry (XL-MS) d
 #### Input
 - XL-MS information, the following columns are needed:
   | gene_a | gene_b | Protein1 | Protein2 | n_score_a | n_score_b | LinkPos1 | LinkPos2 | crosslink_score | crosslink_ab | crosslinks_a | crosslinks_b |
-  | :--- | :---: | :---: | :---: | :---: |  :---: | :---: | :---: | :---: | ---: |
+  | :--- | :---: | :---: | :---: | :---: |  :---: | :---: | :---: | :---: | :---: | :---: |  ---: |
 - crosslinks_a and crosslinks_b columns must contain all crosslinks found in XL-MS data for Protein1 and Protein2
 - reviewed uniprot information downloaded as tsv with the following columns:
   | Entry | Protein names | Gene Names | Subcellular location [CC] | Topological domain | Transmembrane |
