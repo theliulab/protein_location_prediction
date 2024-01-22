@@ -12,7 +12,6 @@ import sys
 import pandas as pd
 import numpy as np
 import re
-import collections
 
 def get_localization_marker_information(data, uniprot):
     """
@@ -376,8 +375,7 @@ def add_topology_information(data,uniprot):
             continue
         else:
             protein_helper_list.append(protein)
-        #if 'NDUFB1' is data.iloc[i]['gene']:
-        #    print(('hi'))
+
         sub = data.loc[data['protein'] == protein]
         number_tm_regions = len(sub[sub['transmembrane'] != ''])
 
@@ -416,7 +414,6 @@ def add_topology_information(data,uniprot):
                 is_lm_list.extend(sub['is_localization_marker'].tolist())
                 continue
 
-        test =len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain'])
         if number_tm_regions > 0 and len(uniprot.loc[uniprot['Entry'] == protein, 'Topological domain']) == 0:
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
@@ -476,7 +473,6 @@ def add_topology_information(data,uniprot):
         topology_info = pd.DataFrame({'start': topo_start, 'end': topo_end, 'topo': topo_locations,'is_lm': topo_is_lm})
 
         # if number of topology information is != number of transmembrane regions + 1 skip it
-
         if len(topology_info.index) < (number_tm_regions + 1):
             gene_list.extend(sub['gene'].tolist())
             protein_list.extend(sub['protein'].tolist())
@@ -489,7 +485,6 @@ def add_topology_information(data,uniprot):
             continue
 
         # loop over subset of protein and add topology based on transmembrane regions
-        #test = range(len(sub.index))
         for k in range(len(sub.index)):
             # dont add topology if it has a transmembrane region in this row
             if sub.iloc[k]['transmembrane'] != "":
@@ -516,7 +511,6 @@ def add_topology_information(data,uniprot):
             elif k == 0:
                 # check if any end of topology region is smaller than following transmembrane start
                 transmembrane_start = int((sub.iloc[k+1]['transmembrane']).split('..')[0])
-                #res = list(filter(lambda i: i < transmembrane_start, list(topology_info["end"])))[0]
                 res = topology_info.index[topology_info["end"] < transmembrane_start].tolist()
                 if not res:
                     gene_list.append(sub.iloc[k]['gene'])
@@ -540,10 +534,8 @@ def add_topology_information(data,uniprot):
                 transmembrane_start = int((sub.iloc[(k+1)]['transmembrane']).split('..')[1])
 
                 # check if any start of topology region is larger than tm end before
-                #res_start = list(filter(lambda i: i > transmembrane_end, list(topology_info["start"])))[0]
                 res_start = topology_info.index[topology_info["start"] > transmembrane_end].tolist()
                 # check if any end of topology region is smaller than following tm start
-                #res_end = list(filter(lambda i: i < transmembrane_start, list(topology_info["end"])))[0]
                 res_end = topology_info.index[topology_info["end"] > transmembrane_start].tolist()
 
                 # intersection of residues
@@ -551,7 +543,6 @@ def add_topology_information(data,uniprot):
                 set_end = set(res_end)
                 idx = set(res_start)^set(res_end)
 
-                #print(idx)
                 if not idx:
                     gene_list.append(sub.iloc[k]['gene'])
                     protein_list.append(sub.iloc[k]['protein'])
@@ -561,12 +552,8 @@ def add_topology_information(data,uniprot):
                     transmembrane_list.append(sub.iloc[k]['transmembrane'])
                     is_lm_list.append("TRUE")
                     continue
-                #idx = collections.Counter(res_start) & collections.Counter(res_end)
-                #res = list(idx.elements())
+
                 res = list(idx)
-                #print(res)
-                # if res_end == res_start then its the same row
-                #if int(res_start) == int(res_end):
 
                 gene_list.append(sub.iloc[k]['gene'])
                 protein_list.append(sub.iloc[k]['protein'])
@@ -576,12 +563,9 @@ def add_topology_information(data,uniprot):
                 transmembrane_list.append(sub.iloc[k]['transmembrane'])
                 is_lm_list.append("TRUE")
 
-                # TODO what if its not equal
-
             elif k == len(sub.index)-1:
                 # if its last only take tm region before and add another row
                 transmembrane_end = int((sub.iloc[k - 1]['transmembrane']).split('..')[0])
-                #res = list(filter(lambda i: i > transmembrane_end, list(topology_info["start"])))[0]
                 res = topology_info.index[topology_info["start"] > transmembrane_end].tolist()
                 if not res:
                     gene_list.append(sub.iloc[k]['gene'])
@@ -609,7 +593,7 @@ def add_topology_information(data,uniprot):
 if __name__ == '__main__':
     # adjust your data paths
     data = pd.read_csv(
-        'lysine_xlinks_xlilo.csv',sep=';',dtype='str')
+        'crosslink_information.csv',sep=';',dtype='str')
     uniprot = pd.read_csv('../protein_location_prediction_local/uniprotkb_AND_reviewed_true_AND_model_o_2023_07_18.tsv',
                           sep='\t', header=0)
 
@@ -622,17 +606,13 @@ if __name__ == '__main__':
     transmem_data = transmem_data.drop_duplicates(subset=['gene'], keep='first')
     print('transmem done')
 
-    #updated_data = change_crosslinks_for_MTproteins(data)
-
     # combine and extend transmembrane proteins to multiple row
     combined_data = combine_lm_transmem_and_proteins(data, lm_data, transmem_data)
     print('combined data done')
 
     # a protein can either have a unique subcellular location, or if it has multiple topological domains
     # it must have a unique location for this domain
-    # TODO kick out proteins if they are membrane proteins but dont have topology information
     combined_data_with_topology = add_topology_information(combined_data,uniprot)
 
-    combined_data.to_csv('combined_data.csv', index=False)
-    combined_data_with_topology.to_csv('combined_data_with_topology.csv',index=False)
+    combined_data_with_topology.to_csv('combined_protein_information.csv',index=False)
     print('csv saved')

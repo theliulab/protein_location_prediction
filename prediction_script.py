@@ -35,22 +35,15 @@ def predict_protein_location_1epoch(proteins):
         topo = proteins.iloc[i]['topology']
         is_lm = proteins.iloc[i]['is_localization_marker']
 
-        #if is_lm == "FALSE" or proteins.iloc[i]['transmembrane'] != '':
-        #    continue
-
         crosslinks_raw = proteins.iloc[i]['crosslinks']
 
         crosslinks = crosslinks_raw.split("#")
         crosslinks = list(set(crosslinks))
-        if gene == 'MDH2':
-            print(crosslinks[-1])
+
         for j in crosslinks:
             link = j.split('-')
             if len(link) < 4:
                 continue
-
-            #if link[0] == 'QTRT2' or link[2] == 'QTRT2':
-            #    print()
 
             if link[2] == gene:
                 gene_b = link[0]
@@ -117,9 +110,6 @@ def combine_predicted_information(proteins,combined_data):
             xlink = sub.iloc[j]['predicting_crosslinks']
             xlink_split = xlink.split('-')
 
-            # if using an older version of the data preparation script you might have to use the next two lines
-            if xlink_split[3] == 'ND1' or xlink_split[3] == 'ATP8':
-                continue
             predicted_gene_list.append(gene)
             predicted_gene_residue_list.append(int(xlink_split[3]))
             predicting_gene_residue_list.append(int(xlink_split[1]))
@@ -417,21 +407,17 @@ def update_xlinks_transmembrane(combined_data):
     return new_data
 
 if __name__ == '__main__':
-    combined_data = pd.read_csv('combined_data_with_topology_defalt.csv')
+    combined_data = pd.read_csv('combined_protein_information.csv')
 
     data = update_xlinks_transmembrane(combined_data)
 
-    data.to_csv('updated_xlinks_intermediate_with_topology_defalt_new2.csv',index=False)
     # predict protein location
     predicted_proteins = predict_protein_location_1epoch(data)
-    predicted_proteins.to_csv('after_prediction_with_topology_deleted_mdh2_test_ying_new2.csv',index=False)
 
     result = combine_predicted_information(predicted_proteins,data)
 
-    result2 = result.sort_values(by=['predicted_gene','predicted_gene_residue'], ascending=True)
-    result2.reset_index().to_csv('prediction_result_with_topology_for_ALL_lm_test_ying_new2.csv', index=False)
-
-    result3 = result2.loc[result2['predicting_gene_is_lm'] == True]
-    result3.reset_index().to_csv('prediction_result_with_topology_for_TRUE_lm_test_ying_new2.csv', index=False)
+    result_reordered = result.sort_values(by=['predicted_gene','predicted_gene_residue'], ascending=True)
+    prediction_result = result_reordered.loc[result_reordered['predicting_gene_is_lm'] == True]
+    prediction_result.reset_index().to_csv('prediction_result.csv', index=False)
 
     print('done')
