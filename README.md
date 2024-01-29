@@ -3,7 +3,7 @@ The scripts in this repository utilize cross-linking mass spectrometry (XL-MS) d
 
 ### Summary and script execution
 - Python v 3.10
-- script execution done in IDE, e.g. PyCharm or Spyder
+- script can be run in Python (e.g. Python IDE)
 - prediction is split into two steps
   1. data preparation script: gets localization and topology information from uniprot for cross-linked proteins in XL-MS data and assigns localization marker; resulting script can be edited manually
   2. prediction script: predicts the localization and topology of proteins by pre-defined localization marker
